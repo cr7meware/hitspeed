@@ -3,8 +3,16 @@ local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
-local allowedUserId = 7843193958 -- AlgdBruce's UserId
-if player.UserId ~= allowedUserId then
+-- Allowlist of UserIds
+local allowedUserIds = {
+    [7843193958] = true, -- AlgdBruce
+    [8699476553] = true, -- ShowSomeFormDoks
+    [8704281609] = true, -- leftinunc
+    [7532939536] = true, -- BullasUncle
+    [8749914574] = true, -- cr7mewaretesting8
+}
+
+if not allowedUserIds[player.UserId] then
     player:Kick("cr7me said no")
     return
 end
