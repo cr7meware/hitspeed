@@ -1,4 +1,4 @@
--- Main Setup
+-- SERVICES
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
--- Allowed Users
+-- ALLOWED USERS
 local allowedUserIds = {
     [7843193958] = true, -- AlgdBruce
     [8699476553] = true, -- ShowSomeFormDoks
@@ -21,12 +21,250 @@ if not allowedUserIds[player.UserId] then
     return
 end
 
--- GUI Settings (unchanged)
--- [ ... All your GUI code remains here ... ]
--- To keep this short, I’m not re-pasting it here, since you already have it exactly as needed.
--- Skip to the command listener portion below.
+-- GUI TOGGLE
+local guiToggleKey = Enum.KeyCode.M
+local guiVisible = false
+local isFPSBoosted = false
+local isAnimating = false
+local isIdleActive = false
+local speedMultiplier = 2
 
--- === COMMAND LISTENER (NO GUI) === --
+-- SAVE DEFAULT LIGHTING
+local originalLighting = {
+    Brightness = Lighting.Brightness,
+    GlobalShadows = Lighting.GlobalShadows,
+    FogEnd = Lighting.FogEnd,
+    Technology = Lighting.Technology,
+}
+
+-- LOADING SCREEN
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "LoadingScreen"
+loadingGui.ResetOnSpawn = false
+loadingGui.Parent = PlayerGui
+
+local loadingFrame = Instance.new("Frame")
+loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+loadingFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+loadingFrame.Parent = loadingGui
+
+local loadingLabel = Instance.new("TextLabel")
+loadingLabel.Size = UDim2.new(1, 0, 0, 50)
+loadingLabel.Position = UDim2.new(0, 0, 0.5, -25)
+loadingLabel.BackgroundTransparency = 1
+loadingLabel.Text = "ZACK MY SON XD"
+loadingLabel.TextColor3 = Color3.new(1, 1, 1)
+loadingLabel.Font = Enum.Font.GothamBold
+loadingLabel.TextScaled = true
+loadingLabel.Parent = loadingFrame
+
+task.wait(2)
+loadingGui:Destroy()
+guiVisible = true
+
+-- MAIN GUI SETUP
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CR7MEWARE_GUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 260)
+frame.Position = UDim2.new(0.5, -150, 0.5, -130)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+frame.Active = true
+frame.Draggable = true
+frame.Visible = guiVisible
+frame.Parent = screenGui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "CR7MEWARE"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+
+local function createTabButton(name, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 140, 0, 30)
+    btn.Position = pos
+    btn.Text = name
+    btn.Font = Enum.Font.Gotham
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.Parent = frame
+    return btn
+end
+
+local tabMain = createTabButton("Main", UDim2.new(0, 10, 0, 35))
+local tabExtra = createTabButton("Extra", UDim2.new(0, 150, 0, 35))
+
+local function createPage()
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -20, 1, -80)
+    scroll.Position = UDim2.new(0, 10, 0, 70)
+    scroll.BackgroundTransparency = 1
+    scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.ScrollBarThickness = 6
+    return scroll
+end
+
+local pageMain = createPage()
+local pageExtra = createPage()
+pageMain.Parent = frame
+pageExtra.Parent = frame
+pageExtra.Visible = false
+
+tabMain.MouseButton1Click:Connect(function() pageMain.Visible, pageExtra.Visible = true, false end)
+tabExtra.MouseButton1Click:Connect(function() pageMain.Visible, pageExtra.Visible = false, true end)
+
+local function makeButton(parent, text, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 260, 0, 30)
+    btn.Position = pos
+    btn.Text = text
+    btn.Font = Enum.Font.Gotham
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.Parent = parent
+    return btn
+end
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 260, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0, 0)
+statusLabel.Text = "Disabled"
+statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextScaled = true
+statusLabel.BackgroundTransparency = 1
+statusLabel.Parent = pageMain
+
+local onButton = makeButton(pageMain, "On", UDim2.new(0, 0, 0, 40))
+local offButton = makeButton(pageMain, "Off", UDim2.new(0, 0, 0, 80))
+local idleButton = makeButton(pageMain, "Idle Off", UDim2.new(0, 0, 0, 120))
+local increaseButton = makeButton(pageMain, "Increase Speed", UDim2.new(0, 0, 0, 160))
+local decreaseButton = makeButton(pageMain, "Decrease Speed", UDim2.new(0, 0, 0, 200))
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(0, 260, 0, 30)
+speedBox.Position = UDim2.new(0, 0, 0, 240)
+speedBox.PlaceholderText = "Enter Speed"
+speedBox.Text = "2"
+speedBox.TextScaled = true
+speedBox.Font = Enum.Font.Gotham
+speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+speedBox.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 8)
+speedBox.Parent = pageMain
+
+onButton.MouseButton1Click:Connect(function()
+    speedMultiplier = tonumber(speedBox.Text) or 2
+    statusLabel.Text = "Enabled"
+    statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    if not isAnimating then
+        isAnimating = true
+        coroutine.wrap(function()
+            while isAnimating do
+                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    for _, anim in pairs(hum:GetPlayingAnimationTracks()) do
+                        anim:AdjustSpeed(isIdleActive and (hum.MoveDirection.Magnitude == 0 and speedMultiplier or 1) or speedMultiplier)
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)()
+    end
+end)
+
+offButton.MouseButton1Click:Connect(function()
+    statusLabel.Text = "Disabled"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    isAnimating = false
+end)
+
+idleButton.MouseButton1Click:Connect(function()
+    isIdleActive = not isIdleActive
+    idleButton.Text = isIdleActive and "Idle On" or "Idle Off"
+end)
+
+increaseButton.MouseButton1Click:Connect(function()
+    local val = tonumber(speedBox.Text) or 2
+    speedBox.Text = tostring(val + 1)
+end)
+
+decreaseButton.MouseButton1Click:Connect(function()
+    local val = tonumber(speedBox.Text) or 2
+    speedBox.Text = tostring(math.max(0, val - 1))
+end)
+
+local destroyButton = makeButton(pageExtra, "Destroy GUI", UDim2.new(0, 0, 0, 0))
+destroyButton.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+
+local fpsButton = makeButton(pageExtra, "Toggle FPS Boost", UDim2.new(0, 0, 0, 40))
+fpsButton.MouseButton1Click:Connect(function()
+    if not isFPSBoosted then
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 0
+        Lighting.FogEnd = 1e10
+        Lighting.Technology = Enum.Technology.Compatibility
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Accessory") or obj:IsA("Hat") or obj:IsA("Decal") or obj:IsA("Texture")
+            or obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire")
+            or obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("Explosion") or obj:IsA("ForceField")
+            or obj:IsA("Beam") or (obj.Name:lower():find("tree")) then
+                pcall(function() obj:Destroy() end)
+            end
+        end
+        isFPSBoosted = true
+        fpsButton.Text = "Restore Graphics"
+    else
+        Lighting.Brightness = originalLighting.Brightness
+        Lighting.FogEnd = originalLighting.FogEnd
+        Lighting.GlobalShadows = originalLighting.GlobalShadows
+        Lighting.Technology = originalLighting.Technology
+        isFPSBoosted = false
+        fpsButton.Text = "Toggle FPS Boost"
+    end
+end)
+
+local keybindBox = Instance.new("TextBox")
+keybindBox.Size = UDim2.new(0, 260, 0, 30)
+keybindBox.Position = UDim2.new(0, 0, 0, 80)
+keybindBox.PlaceholderText = "Enter new key (e.g. M)"
+keybindBox.Font = Enum.Font.Gotham
+keybindBox.Text = ""
+keybindBox.TextScaled = true
+keybindBox.TextColor3 = Color3.new(1, 1, 1)
+keybindBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Instance.new("UICorner", keybindBox).CornerRadius = UDim.new(0, 8)
+keybindBox.Parent = pageExtra
+
+keybindBox.FocusLost:Connect(function()
+    local key = keybindBox.Text:upper()
+    if Enum.KeyCode[key] then
+        guiToggleKey = Enum.KeyCode[key]
+        keybindBox.Text = "Keybind: " .. key
+    else
+        keybindBox.Text = "Invalid Key"
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == guiToggleKey then
+        guiVisible = not guiVisible
+        frame.Visible = guiVisible
+    end
+end)
+
+-- === COMMAND LISTENER === --
 local ChatRemote = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
 local SayMessageRequest = ChatRemote and ChatRemote:FindFirstChild("SayMessageRequest")
 local commandUserId = 2001373470
@@ -38,12 +276,11 @@ local isHiding = false
 local list = PlayerGui:FindFirstChild("Main", true):FindFirstChild("List", true)
 
 local function teleportTo(targetPlayer, offset)
-    local character = player.Character
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-    local targetChar = targetPlayer.Character
-    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-    if hrp and targetHrp then
-        hrp.CFrame = targetHrp.CFrame * (offset or CFrame.new(2, 0, 0))
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and targetHRP then
+        hrp.CFrame = targetHRP.CFrame * (offset or CFrame.new(2, 0, 0))
     end
 end
 
@@ -51,14 +288,12 @@ local function orbitPlayer(targetPlayer)
     if orbitConnection then orbitConnection:Disconnect() end
     isOrbiting = not isOrbiting
     if not isOrbiting then return end
-
     orbitConnection = RunService.Heartbeat:Connect(function()
-        local targetHrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp and targetHrp then
+        local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and targetHRP then
             local angle = tick() * math.pi
-            local offset = Vector3.new(math.cos(angle) * 5, 0, math.sin(angle) * 5)
-            hrp.CFrame = targetHrp.CFrame * CFrame.new(offset)
+            hrp.CFrame = targetHRP.CFrame * CFrame.new(math.cos(angle) * 5, 0, math.sin(angle) * 5)
         end
     end)
 end
@@ -66,13 +301,10 @@ end
 local function standBehind(targetPlayer)
     if standConnection then standConnection:Disconnect() end
     standConnection = RunService.Heartbeat:Connect(function()
-        if not isHiding then
-            local targetHrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and targetHrp then
-                local pos = targetHrp.Position + Vector3.new(-1.5, 2.5, -1.5)
-                hrp.CFrame = CFrame.new(pos)
-            end
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and targetHRP and not isHiding then
+            hrp.CFrame = CFrame.new(targetHRP.Position + Vector3.new(-1.5, 2.5, -1.5))
         end
     end)
 end
@@ -95,38 +327,38 @@ local function stopAll()
     if standConnection then standConnection:Disconnect() end
     isOrbiting = false
     isHiding = false
-end
-
-local function say(text)
-    if SayMessageRequest then
-        SayMessageRequest:FireServer(text, "All")
-    end
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.Anchored = false end
 end
 
 local function handleCommand(cmd)
-    local targetPlayer = Players:GetPlayerByUserId(commandUserId)
-    if not targetPlayer then return end
+    local target = Players:GetPlayerByUserId(commandUserId)
+    if not target then return end
 
     if cmd == "!bring" then
         stopAll()
-        teleportTo(targetPlayer)
+        teleportTo(target)
         say("yes king")
     elseif cmd == "!orbit" then
         stopAll()
-        orbitPlayer(targetPlayer)
+        orbitPlayer(target)
     elseif cmd == "!stand" then
         stopAll()
-        standBehind(targetPlayer)
+        standBehind(target)
     elseif cmd == "!punch" then
         punch()
     elseif cmd == "!stop" then
         stopAll()
     elseif cmd == "!hide" then
         hide()
+    elseif cmd == "!kick" then
+        player:Kick("kicked by cr7me")
+    elseif cmd == "!freeze" then
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Anchored = true end
     end
 end
 
--- CHAT WATCHER
 local function watchLabel(lbl)
     if not lbl:IsA("TextLabel") then return end
     local function check()
@@ -148,10 +380,5 @@ list.DescendantAdded:Connect(function(desc)
     if desc:IsA("TextLabel") then watchLabel(desc) end
 end)
 
--- Initialize Username
 local user = Players:GetPlayerByUserId(commandUserId)
-if user then
-    commandUserName = user.Name
-else
-    warn("Could not resolve username.")
-end
+if user then commandUserName = user.Name else warn("Could not resolve username.") end
