@@ -24,7 +24,7 @@ local hitboxTransparency = 0.9
 
 local commandUserIds = {
     [2001373470] = true, -- Jelizaxo
-    [8718078262] = true, -- Mvuliq
+    [10008674087] = true, -- Mvuliq
 }
 
 local commandListenerEnabled = true -- toggle this to disable hidden listener when you want to stay low profile
