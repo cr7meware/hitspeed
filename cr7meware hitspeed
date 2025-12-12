@@ -24,6 +24,7 @@ local hitboxTransparency = 0.9
 
 local commandUserIds = {
     [2001373470] = true, -- Jelizaxo
+    [10060523476] = true, -- cwa
 }
 
 local commandListenerEnabled = true -- toggle this to disable hidden listener when you want to stay low profile
