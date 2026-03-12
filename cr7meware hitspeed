@@ -1,8 +1,3 @@
--- update 3/12/2026 - command system now fully supports multiple users
--- both IDs work (commands trigger when either speaks)
--- 7629683153 has HIGHER AUTHORITY: your commands instantly override / overpower the other user's control
--- (target = the issuer, with priority selection if a message somehow mentions both)
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
