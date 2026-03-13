@@ -22,7 +22,7 @@ local hitboxTransparency = 0.9
 
 local commandUserIds = {
     [7629683153] = true,
-    [8846937563] = true,
+    [] = true,
 }
 
 local higherAuthorityId = 7629683153  -- YOU have higher authority (commands from you instantly overpower)
