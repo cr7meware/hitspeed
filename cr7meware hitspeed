@@ -6,6 +6,7 @@ local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
+
 -- ===== SETTINGS =====
 local guiToggleKey = Enum.KeyCode.M
 local guiVisible = true
@@ -20,12 +21,12 @@ local hitboxTransparency = 0.9
 local commandUserIds = {[7629683153] = true, [8846937563] = true}
 local higherAuthorityId = 7629683153
 local commandListenerEnabled = true
--- ===== LOWER AUTHORITY IDS (ADD MORE HERE IN THE FUTURE) =====
+
+-- ===== LOWER AUTHORITY IDS =====
 local lowerAuthorityIds = {
     -- [1234567890] = true, -- ← add new lower auth UserIds here
-    -- [9876543210] = true,
-    -- [1112223334] = true,
 }
+
 -- ===== EMOJI + SCRIPT USER NAME TAG SYSTEM =====
 local function getAuthorityBadge(userId)
     if userId == higherAuthorityId then
@@ -35,21 +36,22 @@ local function getAuthorityBadge(userId)
     end
     return ""
 end
+
 local MARKER_NAME = "CR7ME_ACTIVE"
-local scriptUsers = {} -- tracks regular script users (non-auth)
-local nameTags = {} -- [plr] = billboard
+local scriptUsers = {}
+local nameTags = {}
+
 local function placeMarker()
-    if player.Character then
-        if not player.Character:FindFirstChild(MARKER_NAME) then
-            local marker = Instance.new("StringValue")
-            marker.Name = MARKER_NAME
-            marker.Value = "active"
-            marker.Parent = player.Character
-        end
+    if player.Character and not player.Character:FindFirstChild(MARKER_NAME) then
+        local marker = Instance.new("StringValue")
+        marker.Name = MARKER_NAME
+        marker.Value = "active"
+        marker.Parent = player.Character
     end
 end
 player.CharacterAdded:Connect(placeMarker)
 task.spawn(placeMarker)
+
 local function createNameTag(plr)
     if nameTags[plr] then return end
     local function buildTag()
@@ -89,7 +91,7 @@ local function createNameTag(plr)
         buildTag()
     end)
 end
--- Scan for other script users + authorities and create name tags
+
 task.spawn(function()
     while true do
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -101,31 +103,29 @@ task.spawn(function()
                 createNameTag(plr)
             else
                 scriptUsers[plr] = nil
-                if nameTags[plr] then
-                    nameTags[plr]:Destroy()
-                    nameTags[plr] = nil
-                end
+                if nameTags[plr] then nameTags[plr]:Destroy() nameTags[plr] = nil end
             end
         end
         task.wait(4)
     end
 end)
+
 Players.PlayerRemoving:Connect(function(plr)
-    if nameTags[plr] then
-        nameTags[plr]:Destroy()
-        nameTags[plr] = nil
-    end
+    if nameTags[plr] then nameTags[plr]:Destroy() nameTags[plr] = nil end
     scriptUsers[plr] = nil
 end)
+
 -- ===== AUTO WEAVE SETTINGS =====
 local autoweaveActive = false
 local autoweaveTask = nil
 local HoldDuration = 0.220
 local ReweaveDelay = 0
+
 -- ===== DAMAGE COUNTER =====
 local damageCounterEnabled = true
 local lastPunchTime = 0
 local previousHealth = {}
+
 -- ===== LOADING SCREEN =====
 local loadingGui = Instance.new("ScreenGui")
 loadingGui.Name = "CR7ME_Loading"
@@ -160,6 +160,7 @@ for i = 1, #fullText do
     task.wait(0.05)
 end
 pcall(function() loadingGui:Destroy() end)
+
 -- ===== SAVE LIGHTING =====
 local originalLighting = {
     Brightness = Lighting.Brightness, GlobalShadows = Lighting.GlobalShadows, FogEnd = Lighting.FogEnd,
@@ -171,66 +172,91 @@ local originalLighting = {
 }
 local originalGraphicsQuality = 10
 pcall(function() originalGraphicsQuality = settings().Rendering.QualityLevel end)
--- ===== MAIN GUI =====
+
+-- ===== MAIN GUI (IMPROVED LOOK - BLACK + RED THEME) =====
 local screenGui = Instance.new("ScreenGui", PlayerGui)
 screenGui.Name = "CR7MEWARE_GUI"
 screenGui.ResetOnSpawn = false
+
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 480, 0, 290)
 frame.Position = UDim2.new(0.5, -240, 0.5, -145)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
 frame.Active = true
 frame.Draggable = true
 frame.Visible = false
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+
+local mainStroke = Instance.new("UIStroke", frame)
+mainStroke.Color = Color3.fromRGB(220, 30, 30)
+mainStroke.Thickness = 2.5
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local titleUnderline = Instance.new("Frame", frame)
+titleUnderline.Size = UDim2.new(0.75, 0, 0, 3)
+titleUnderline.Position = UDim2.new(0.125, 0, 0, 32)
+titleUnderline.BackgroundColor3 = Color3.fromRGB(220, 30, 30)
+titleUnderline.BorderSizePixel = 0
+Instance.new("UICorner", titleUnderline).CornerRadius = UDim.new(0, 3)
+
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0.5, 0, 0, 0)
 title.AnchorPoint = Vector2.new(0.5, 0)
-title.Text = "CR7MEWARE" .. getAuthorityBadge(player.UserId) -- ← authority emoji added here
+title.Text = "CR7MEWARE" .. getAuthorityBadge(player.UserId)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 20
+title.TextSize = 22
 title.TextColor3 = Color3.fromRGB(220, 30, 30)
 title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Center
+
 local guiToggleBtn = Instance.new("TextButton", screenGui)
 guiToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 guiToggleBtn.Position = UDim2.new(1, -60, 0, 10)
 guiToggleBtn.AnchorPoint = Vector2.new(1, 0)
 guiToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-guiToggleBtn.BackgroundTransparency = 0.7
+guiToggleBtn.BackgroundTransparency = 0.6
 guiToggleBtn.Text = "💢"
-guiToggleBtn.TextSize = 24
+guiToggleBtn.TextSize = 26
 guiToggleBtn.TextColor3 = Color3.new(1, 1, 1)
-guiToggleBtn.Font = Enum.Font.Gotham
+guiToggleBtn.Font = Enum.Font.GothamBold
 guiToggleBtn.ZIndex = 10
 guiToggleBtn.Active = true
 guiToggleBtn.Draggable = true
-Instance.new("UICorner", guiToggleBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", guiToggleBtn).CornerRadius = UDim.new(0, 12)
+
 guiToggleBtn.MouseButton1Click:Connect(function()
     guiVisible = not guiVisible
     frame.Visible = guiVisible
 end)
--- ===== SCROLLABLE SIDEBAR =====
+
+-- ===== SCROLLABLE SIDEBAR (balanced top/bottom padding) =====
 local sidebar = Instance.new("Frame", frame)
 sidebar.Size = UDim2.new(0, 140, 1, -40)
 sidebar.Position = UDim2.new(0, 10, 0, 35)
 sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 12)
+
+local sidebarStroke = Instance.new("UIStroke", sidebar)
+sidebarStroke.Color = Color3.fromRGB(220, 30, 30)
+sidebarStroke.Thickness = 1.5
+
 local scrollContainer = Instance.new("ScrollingFrame", sidebar)
-scrollContainer.Size = UDim2.new(1, -10, 1, -10)
-scrollContainer.Position = UDim2.new(0, 5, 0, 5)
+scrollContainer.Size = UDim2.new(1, -10, 1, -20)   -- extra bottom padding for balance
+scrollContainer.Position = UDim2.new(0, 5, 0, 18)  -- increased top padding so space above first tab matches space below last tab
 scrollContainer.BackgroundTransparency = 1
 scrollContainer.ScrollBarThickness = 6
 scrollContainer.ScrollBarImageColor3 = Color3.fromRGB(220, 30, 30)
 scrollContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+
 -- ===== CONTENT AREA =====
 local contentArea = Instance.new("Frame", frame)
 contentArea.Size = UDim2.new(1, -160, 1, -40)
 contentArea.Position = UDim2.new(0, 160, 0, 35)
 contentArea.BackgroundTransparency = 1
+
 local function createPage()
     local page = Instance.new("Frame")
     page.Size = UDim2.new(1, 0, 1, 0)
@@ -239,13 +265,20 @@ local function createPage()
     page.Parent = contentArea
     return page
 end
+
 local pageInfo = createPage()
 pageInfo.Visible = true
+
 local infoBg = Instance.new("Frame", pageInfo)
 infoBg.Size = UDim2.new(1, -20, 1, -20)
 infoBg.Position = UDim2.new(0, 10, 0, 10)
-infoBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Instance.new("UICorner", infoBg).CornerRadius = UDim.new(0, 10)
+infoBg.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+Instance.new("UICorner", infoBg).CornerRadius = UDim.new(0, 12)
+
+local infoStroke = Instance.new("UIStroke", infoBg)
+infoStroke.Color = Color3.fromRGB(220, 30, 30)
+infoStroke.Thickness = 1.2
+
 local infoTitle = Instance.new("TextLabel", infoBg)
 infoTitle.Size = UDim2.new(1, -20, 0, 50)
 infoTitle.Position = UDim2.new(0, 10, 0, 20)
@@ -255,23 +288,26 @@ infoTitle.Font = Enum.Font.GothamBold
 infoTitle.TextSize = 28
 infoTitle.TextColor3 = Color3.fromRGB(220, 30, 30)
 infoTitle.TextXAlignment = Enum.TextXAlignment.Center
--- NEW UPDATE TEXT (everything else removed)
+
 local updateText = Instance.new("TextLabel", infoBg)
 updateText.Size = UDim2.new(1, -40, 1, -100)
-updateText.Position = UDim2.new(0, 20, 0, 80)
+updateText.Position = UDim2.new(0, 20, 0, 85)
 updateText.BackgroundTransparency = 1
-updateText.Text = "* Reworked hitbox"
+updateText.Text = "• Reworked Hitbox\n• New GUI\n• Added Autoweave\n• Added Walk Speed"
 updateText.Font = Enum.Font.Gotham
 updateText.TextSize = 18
 updateText.TextColor3 = Color3.new(1, 1, 1)
-updateText.TextXAlignment = Enum.TextXAlignment.Center
+updateText.TextXAlignment = Enum.TextXAlignment.Left
 updateText.TextYAlignment = Enum.TextYAlignment.Top
 updateText.TextWrapped = true
+updateText.RichText = true
+
 local pageMain = createPage()
 local pageHitbox = createPage()
 local pageSpeed = createPage()
 local pageWeave = createPage()
 local pageExtra = createPage()
+
 -- ===== SIDEBAR TABS =====
 local tabData = {
     {text = "Punch Speed", page = pageMain},
@@ -280,8 +316,10 @@ local tabData = {
     {text = "Auto Weave", page = pageWeave},
     {text = "Extra", page = pageExtra},
 }
+
 local selectedButton = nil
-local yPos = 10
+local yPos = 8   -- balanced top padding inside scroll
+
 for _, data in ipairs(tabData) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 42)
@@ -293,6 +331,14 @@ for _, data in ipairs(tabData) do
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     btn.Parent = scrollContainer
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+    btn.MouseEnter:Connect(function()
+        if btn ~= selectedButton then btn.BackgroundColor3 = Color3.fromRGB(50, 0, 0) end
+    end)
+    btn.MouseLeave:Connect(function()
+        if btn ~= selectedButton then btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35) end
+    end)
+
     btn.MouseButton1Click:Connect(function()
         pageInfo.Visible = false
         pageMain.Visible = false
@@ -302,11 +348,12 @@ for _, data in ipairs(tabData) do
         pageExtra.Visible = false
         data.page.Visible = true
         if selectedButton then selectedButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35) end
-        btn.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(70, 0, 0)
         selectedButton = btn
     end)
     yPos += 52
 end
+
 -- ===== OPEN ANIMATION =====
 task.spawn(function()
     task.wait(0.05)
@@ -317,6 +364,7 @@ task.spawn(function()
     frame.Position = UDim2.new(originalPos.X.Scale, originalPos.X.Offset + originalSize.X.Offset / 2 - 1, originalPos.Y.Scale, originalPos.Y.Offset + originalSize.Y.Offset / 2 - 1)
     TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = originalSize, Position = originalPos}):Play()
 end)
+
 -- ===== HELPERS =====
 local function makeButton(parent, text, pos)
     local btn = Instance.new("TextButton")
@@ -330,8 +378,12 @@ local function makeButton(parent, text, pos)
     btn.TextSize = 13
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     btn.Parent = parent
+
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(55, 0, 0) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35) end)
     return btn
 end
+
 local function makeLabel(parent, text, pos)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(0, 240, 0, 18)
@@ -346,6 +398,7 @@ local function makeLabel(parent, text, pos)
     lbl.Parent = parent
     return lbl
 end
+
 local function makeTextbox(parent, placeholder, default, pos)
     local tb = Instance.new("TextBox")
     tb.Size = UDim2.new(0, 240, 0, 26)
@@ -361,6 +414,7 @@ local function makeTextbox(parent, placeholder, default, pos)
     tb.Parent = parent
     return tb
 end
+
 local function makeToggle(parent, labelText, pos, initialState, callback)
     local frameToggle = Instance.new("Frame", parent)
     frameToggle.Size = UDim2.new(0, 240, 0, 26)
@@ -384,6 +438,7 @@ local function makeToggle(parent, labelText, pos, initialState, callback)
     toggleBtn.TextColor3 = Color3.new(1, 1, 1)
     toggleBtn.TextSize = 13
     Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+
     toggleBtn.MouseButton1Click:Connect(function()
         local newState = not (toggleBtn.Text == "On")
         toggleBtn.Text = newState and "On" or "Off"
@@ -392,10 +447,11 @@ local function makeToggle(parent, labelText, pos, initialState, callback)
     end)
     return frameToggle, toggleBtn
 end
--- ===== PUNCH SPEED TAB =====
+
+-- ===== PUNCH SPEED TAB (shifted down for breathing room) =====
 local statusContainer = Instance.new("Frame", pageMain)
 statusContainer.Size = UDim2.new(0, 240, 0, 28)
-statusContainer.Position = UDim2.new(0.5, 0, 0, 0)
+statusContainer.Position = UDim2.new(0.5, 0, 0, 28)   -- shifted
 statusContainer.AnchorPoint = Vector2.new(0.5, 0)
 statusContainer.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 Instance.new("UICorner", statusContainer).CornerRadius = UDim.new(0, 6)
@@ -408,11 +464,13 @@ statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 13
 statusLabel.TextColor3 = Color3.fromRGB(0,0,0)
 statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-local onButton = makeButton(pageMain, "Enable Punch Speed", UDim2.new(0, 0, 0, 35))
-local offButton = makeButton(pageMain, "Disable Punch Speed", UDim2.new(0, 0, 0, 65))
-local increaseButton = makeButton(pageMain, "Increase Speed", UDim2.new(0, 0, 0, 95))
-local decreaseButton = makeButton(pageMain, "Decrease Speed", UDim2.new(0, 0, 0, 125))
-local speedBox = makeTextbox(pageMain, "Enter Speed", tostring(speedMultiplier), UDim2.new(0, 0, 0, 155))
+
+local onButton = makeButton(pageMain, "Enable Punch Speed", UDim2.new(0, 0, 0, 63))
+local offButton = makeButton(pageMain, "Disable Punch Speed", UDim2.new(0, 0, 0, 93))
+local increaseButton = makeButton(pageMain, "Increase Speed", UDim2.new(0, 0, 0, 123))
+local decreaseButton = makeButton(pageMain, "Decrease Speed", UDim2.new(0, 0, 0, 153))
+local speedBox = makeTextbox(pageMain, "Enter Speed", tostring(speedMultiplier), UDim2.new(0, 0, 0, 183))
+
 local isAnimating = false
 local function updateStatusBubble(enabled)
     if enabled then
@@ -453,15 +511,17 @@ decreaseButton.MouseButton1Click:Connect(function()
     local val = tonumber(speedBox.Text) or 2
     speedBox.Text = tostring(math.max(0, val - 1))
 end)
--- ===== HITBOX TAB (YOUR EXACT ORIGINAL) =====
-local hitboxLabel = makeLabel(pageHitbox, "Hitbox Size (default 7)", UDim2.new(0, 0, 0, 0))
-local hitboxSizeBox = makeTextbox(pageHitbox, "Hitbox Size", tostring(defaultHitboxSize), UDim2.new(0, 0, 0, 22))
-local transparencyLabel = makeLabel(pageHitbox, "Hitbox Transparency (0 - 1)", UDim2.new(0, 0, 0, 52))
-local transparencyBox = makeTextbox(pageHitbox, "Transparency", tostring(hitboxTransparency), UDim2.new(0, 0, 0, 72))
-local teamCheckFrame, _ = makeToggle(pageHitbox, "Team Check", UDim2.new(0, 0, 0, 102), false, function(state) teamCheck = state if hitboxEnabled then applyHitboxes() end end)
-local hitboxToggleFrame, _ = makeToggle(pageHitbox, "Enable Hitbox Expander", UDim2.new(0, 0, 0, 132), false, function(state) hitboxEnabled = state if state then applyHitboxes() else resetHitboxes() end end)
-local damageToggleFrame, _ = makeToggle(pageHitbox, "Enable Damage Counter", UDim2.new(0, 0, 0, 162), true, function(state) damageCounterEnabled = state end)
--- HITBOX LOGIC TAKEN DIRECTLY FROM ORIGINAL SCRIPT
+
+-- ===== HITBOX TAB (shifted down + centered) =====
+local hitboxLabel = makeLabel(pageHitbox, "Hitbox Size (default 7)", UDim2.new(0, 0, 0, 28))
+local hitboxSizeBox = makeTextbox(pageHitbox, "Hitbox Size", tostring(defaultHitboxSize), UDim2.new(0, 0, 0, 50))
+local transparencyLabel = makeLabel(pageHitbox, "Hitbox Transparency (0 - 1)", UDim2.new(0, 0, 0, 80))
+local transparencyBox = makeTextbox(pageHitbox, "Transparency", tostring(hitboxTransparency), UDim2.new(0, 0, 0, 100))
+local teamCheckFrame, _ = makeToggle(pageHitbox, "Team Check", UDim2.new(0, 0, 0, 130), false, function(state) teamCheck = state if hitboxEnabled then applyHitboxes() end end)
+local hitboxToggleFrame, _ = makeToggle(pageHitbox, "Enable Hitbox Expander", UDim2.new(0, 0, 0, 160), false, function(state) hitboxEnabled = state if state then applyHitboxes() else resetHitboxes() end end)
+local damageToggleFrame, _ = makeToggle(pageHitbox, "Enable Damage Counter", UDim2.new(0, 0, 0, 190), true, function(state) damageCounterEnabled = state end)
+
+-- HITBOX LOGIC
 local targets = {}
 local function updateTargets()
     targets = {}
@@ -504,10 +564,11 @@ local hitboxMaintenance = RunService.RenderStepped:Connect(function()
 end)
 Players.PlayerAdded:Connect(function(plr) plr.CharacterAdded:Connect(function() task.wait(1) if hitboxEnabled then applyHitboxes() end end) end)
 for _, plr in pairs(Players:GetPlayers()) do plr.CharacterAdded:Connect(function() task.wait(1) if hitboxEnabled then applyHitboxes() end end) end
--- ===== WALK SPEED TAB =====
-local speedLabel = makeLabel(pageSpeed, "Walk Speed (default 16)", UDim2.new(0, 0, 0, 0))
-local speedBox = makeTextbox(pageSpeed, "Enter Walk Speed", tostring(walkSpeedValue), UDim2.new(0, 0, 0, 22))
-local speedToggleFrame, _ = makeToggle(pageSpeed, "Enable Walk Speed", UDim2.new(0, 0, 0, 52), false, function(state)
+
+-- ===== WALK SPEED TAB (shifted) =====
+local speedLabel = makeLabel(pageSpeed, "Walk Speed (default 16)", UDim2.new(0, 0, 0, 28))
+local speedBox = makeTextbox(pageSpeed, "Enter Walk Speed", tostring(walkSpeedValue), UDim2.new(0, 0, 0, 50))
+local speedToggleFrame, _ = makeToggle(pageSpeed, "Enable Walk Speed", UDim2.new(0, 0, 0, 80), false, function(state)
     walkSpeedEnabled = state
     if state then applyWalkSpeed() else resetWalkSpeed() end
 end)
@@ -527,53 +588,16 @@ function resetWalkSpeed()
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then hum.WalkSpeed = 16 end
 end
--- ===== AUTO WEAVE FUNCTIONS (YOUR EXACT ORIGINAL) =====
-local function getRemote()
-    local char = player.Character or player.CharacterAdded:Wait()
-    for i = 1, 20 do
-        local core = char:FindFirstChild("Core")
-        if core then
-            local comm = core:FindFirstChild("Communicate")
-            if comm and comm:FindFirstChildOfClass("RemoteEvent") then
-                return comm:FindFirstChildOfClass("RemoteEvent")
-            end
-        end
-        task.wait()
-    end
-    return nil
-end
-local function startAutoweave()
-    if autoweaveActive then return end
-    autoweaveActive = true
-    autoweaveTask = task.spawn(function()
-        while autoweaveActive do
-            local remote = getRemote()
-            if remote then
-                remote:FireServer("Weave", nil, true)
-                task.wait(HoldDuration)
-                if not autoweaveActive then break end
-                remote:FireServer("Weave", nil, false)
-                RunService.Heartbeat:Wait()
-            else task.wait() end
-        end
-    end)
-end
-local function stopAutoweave()
-    autoweaveActive = false
-    if autoweaveTask then task.cancel(autoweaveTask) end
-    autoweaveTask = nil
-    local remote = getRemote()
-    if remote then remote:FireServer("Weave", nil, false) end
-end
--- ===== AUTO WEAVE TAB (with your requested note) =====
-local weaveHoldLabel = makeLabel(pageWeave, "Hold Duration (0.050 - 0.500)", UDim2.new(0, 0, 0, 10))
-local weaveHoldBox = makeTextbox(pageWeave, "Hold Duration", tostring(HoldDuration), UDim2.new(0, 0, 0, 30))
-local weaveDelayLabel = makeLabel(pageWeave, "Re-weave Delay (0.000 - 0.200)", UDim2.new(0, 0, 0, 60))
-local weaveDelayBox = makeTextbox(pageWeave, "Re-weave Delay", tostring(ReweaveDelay), UDim2.new(0, 0, 0, 80))
-local weaveToggleFrame, _ = makeToggle(pageWeave, "Enable Auto Weave", UDim2.new(0, 0, 0, 110), false, function(state)
+
+-- ===== AUTO WEAVE TAB (shifted) =====
+local weaveHoldLabel = makeLabel(pageWeave, "Hold Duration (0.050 - 0.500)", UDim2.new(0, 0, 0, 28))
+local weaveHoldBox = makeTextbox(pageWeave, "Hold Duration", tostring(HoldDuration), UDim2.new(0, 0, 0, 50))
+local weaveDelayLabel = makeLabel(pageWeave, "Re-weave Delay (0.000 - 0.200)", UDim2.new(0, 0, 0, 80))
+local weaveDelayBox = makeTextbox(pageWeave, "Re-weave Delay", tostring(ReweaveDelay), UDim2.new(0, 0, 0, 102))
+local weaveToggleFrame, _ = makeToggle(pageWeave, "Enable Auto Weave", UDim2.new(0, 0, 0, 132), false, function(state)
     if state then startAutoweave() else stopAutoweave() end
 end)
-local noteLabel = makeLabel(pageWeave, "Note: Does not work well with hitbox at the same time", UDim2.new(0, 0, 0, 145))
+local noteLabel = makeLabel(pageWeave, "Note: Does not work well with hitbox at the same time", UDim2.new(0, 0, 0, 162))
 noteLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 noteLabel.TextSize = 13
 noteLabel.TextWrapped = true
@@ -588,10 +612,11 @@ weaveDelayBox.FocusLost:Connect(function()
     if val then ReweaveDelay = math.clamp(val, 0.000, 0.200) end
     weaveDelayBox.Text = tostring(ReweaveDelay)
 end)
--- ===== EXTRA TAB =====
-local destroyButton = makeButton(pageExtra, "Destroy GUI", UDim2.new(0, 0, 0, 0))
+
+-- ===== EXTRA TAB (shifted) =====
+local destroyButton = makeButton(pageExtra, "Destroy GUI", UDim2.new(0, 0, 0, 28))
 destroyButton.MouseButton1Click:Connect(function() pcall(function() screenGui:Destroy() end) end)
-local testDamageButton = makeButton(pageExtra, "TEST Damage Popup", UDim2.new(0, 0, 0, 30))
+local testDamageButton = makeButton(pageExtra, "TEST Damage Popup", UDim2.new(0, 0, 0, 58))
 testDamageButton.MouseButton1Click:Connect(function()
     local closestRoot = nil
     local closestDist = math.huge
@@ -613,7 +638,7 @@ testDamageButton.MouseButton1Click:Connect(function()
         createDamagePopup(69, closestRoot)
     end
 end)
-local fpsButton = makeButton(pageExtra, "Toggle FPS Boost", UDim2.new(0, 0, 0, 60))
+local fpsButton = makeButton(pageExtra, "Toggle FPS Boost", UDim2.new(0, 0, 0, 88))
 fpsButton.MouseButton1Click:Connect(function()
     if not isFPSBoosted then
         Lighting.GlobalShadows = false
@@ -660,10 +685,10 @@ fpsButton.MouseButton1Click:Connect(function()
         fpsButton.Text = "Toggle FPS Boost"
     end
 end)
-local rejoinButton = makeButton(pageExtra, "Rejoin Game", UDim2.new(0, 0, 0, 90))
+local rejoinButton = makeButton(pageExtra, "Rejoin Game", UDim2.new(0, 0, 0, 118))
 rejoinButton.MouseButton1Click:Connect(function() TeleportService:Teleport(game.PlaceId, player) end)
-local keybindLabel = makeLabel(pageExtra, "Toggle GUI Keybind:", UDim2.new(0, 0, 0, 120))
-local keybindBox = makeTextbox(pageExtra, "Keybind", guiToggleKey.Name, UDim2.new(0, 0, 0, 142))
+local keybindLabel = makeLabel(pageExtra, "Toggle GUI Keybind:", UDim2.new(0, 0, 0, 148))
+local keybindBox = makeTextbox(pageExtra, "Keybind", guiToggleKey.Name, UDim2.new(0, 0, 0, 170))
 keybindBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local keyName = keybindBox.Text:upper()
@@ -675,6 +700,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == guiToggleKey then guiVisible = not guiVisible frame.Visible = guiVisible end
 end)
+
 -- ===== DAMAGE COUNTER v3 =====
 local function createDamagePopup(damage, targetRoot)
     if not targetRoot then return end
@@ -750,6 +776,7 @@ Players.PlayerAdded:Connect(function(plr)
         previousHealth[plr] = 100
     end
 end)
+
 -- ===== COMMAND SYSTEM =====
 local lastCommand = ""
 local previousCommands = {}
@@ -962,6 +989,7 @@ local function monitorChatUI()
     for _, lbl in ipairs(list:GetDescendants()) do pcall(function() watchTextLabel(lbl) end) end
 end
 spawn(monitorChatUI)
+
 -- ===== CLEANUP =====
 player.CharacterAdded:Connect(function()
     task.wait(0.8)
@@ -977,4 +1005,42 @@ screenGui.AncestryChanged:Connect(function()
         if damageCheckConnection then damageCheckConnection:Disconnect() end
     end
 end)
--- End of script.
+
+-- ===== AUTO WEAVE FUNCTIONS =====
+local function getRemote()
+    local char = player.Character or player.CharacterAdded:Wait()
+    for i = 1, 20 do
+        local core = char:FindFirstChild("Core")
+        if core then
+            local comm = core:FindFirstChild("Communicate")
+            if comm and comm:FindFirstChildOfClass("RemoteEvent") then
+                return comm:FindFirstChildOfClass("RemoteEvent")
+            end
+        end
+        task.wait()
+    end
+    return nil
+end
+local function startAutoweave()
+    if autoweaveActive then return end
+    autoweaveActive = true
+    autoweaveTask = task.spawn(function()
+        while autoweaveActive do
+            local remote = getRemote()
+            if remote then
+                remote:FireServer("Weave", nil, true)
+                task.wait(HoldDuration)
+                if not autoweaveActive then break end
+                remote:FireServer("Weave", nil, false)
+                RunService.Heartbeat:Wait()
+            else task.wait() end
+        end
+    end)
+end
+local function stopAutoweave()
+    autoweaveActive = false
+    if autoweaveTask then task.cancel(autoweaveTask) end
+    autoweaveTask = nil
+    local remote = getRemote()
+    if remote then remote:FireServer("Weave", nil, false) end
+end
